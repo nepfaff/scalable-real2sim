@@ -1,0 +1,56 @@
+[tool.poetry]
+name = "scalable_real2sim"
+version = "0.1.0"
+description = ""
+authors = ["Nicholas Pfaff <nepfaff@mit.edu>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+drake = { version = ">=0.0.20250118 <1.0", source = "drake-nightly" }
+numpy = "^2.2.0"
+scipy = "^1.15.1"
+manipulation = "^2025.2.16"
+open3d = "^0.19.0"
+sam2 = "^0.4.1"
+transformers = {git = "https://github.com/huggingface/transformers.git", rev = "9c02cb6233eddedd8ecf0d48957cb481103f93f3"}
+opencv-python = "^4.10.0.84"
+accelerate = "^1.2.1"
+torch = "2.3.1"
+clip = "^0.2.0"
+timm = "^1.0.14"
+coacd = "^1.0.5"
+vhacdx = "^0.0.8.post2"
+robot-payload-id = {path = "scalable_real2sim/robot_payload_id"}
+torchvision = "0.18.1"
+trimesh = "^4.6.2"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.4.0"
+black = "23.9.1"
+isort = "5.12.0"
+poetry-pre-commit-plugin = "^0.1.2"
+
+[[tool.poetry.source]]
+name = "drake-nightly"
+url = "https://drake-packages.csail.mit.edu/whl/nightly/"
+priority = "explicit"
+
+[tool.isort]
+profile = 'black'
+lines_between_types = 1
+combine_as_imports = true
+known_first_party = ['dynamic_mesh_distance']
+
+[tool.autoflake]
+in-place = true
+recursive = true
+expand-star-imports = true
+ignore-init-module-imports = true
+remove-all-unused-imports = true
+remove-duplicate-keys = true
+remove-unused-variables = true
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
