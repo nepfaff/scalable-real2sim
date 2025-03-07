@@ -18,9 +18,7 @@ import torch
 
 from tqdm import tqdm
 
-from scalable_real2sim.data_processing.frosting import (
-    process_moving_obj_data_for_sugar,
-)
+from scalable_real2sim.data_processing.frosting import process_moving_obj_data_for_sugar
 from scalable_real2sim.data_processing.image_subsampling import (
     select_and_copy_dissimilar_images,
 )
@@ -358,6 +356,26 @@ def run_neuralangelo(data_dir: str, output_dir: str, use_depth: bool = False) ->
     os.chdir(current_dir)
 
 
+def replace_trimesh_mesh_material(mesh_path: str) -> None:
+    """Replaces the trimesh material file values with a nicer looking one."""
+    material_path = os.path.join(os.path.dirname(mesh_path), "material.mtl")
+
+    # Replace the material values with nicer looking ones.
+    with open(material_path, "w") as mtl_file:
+        mtl_file.write(
+            "newmtl material_0\n"
+            "Ns 50.000000\n"
+            "Ka 1.000000 1.000000 1.000000\n"
+            "Kd 1.0 1.0 1.0\n"
+            "Ks 0.2 0.2 0.2\n"
+            "Ke 0.000000 0.000000 0.000000\n"
+            "Ni 1.500000\n"
+            "d 1.000000\n"
+            "illum 2\n"
+            "map_Kd material_0.png\n"
+        )
+
+
 def main(
     data_dir: str,
     robot_id_dir: str,
@@ -434,17 +452,21 @@ def main(
                 mesh_path=bundle_sdf_mesh_path,
                 output_path=bundle_sdf_mesh_path,
             )
+            replace_trimesh_mesh_material(bundle_sdf_mesh_path)
             logging.info(f"Canonicalized BundleSDF mesh: {bundle_sdf_mesh_path}")
 
-            # Physical property estimation.
+            # Physical property estimation in the BundleSDF frame.
+            bundle_sdf_inertia_params_path = os.path.join(
+                object_dir, "bundle_sdf_inertial_params.json"
+            )
             identify_grasped_object_payload(
                 robot_joint_data_path=robot_id_dir,
                 object_joint_data_path=os.path.join(object_dir, "system_id_data"),
                 object_mesh_path=bundle_sdf_mesh_path,
+                json_output_path=bundle_sdf_inertia_params_path,
             )
-            inertia_params_path = os.path.join(object_dir, "inertial_params.json")
-            with open(inertia_params_path, "r") as f:
-                inertia_params = json.load(f)
+            with open(bundle_sdf_inertia_params_path, "r") as f:
+                bundle_sdf_inertia_params = json.load(f)
 
             # Output the BundleSDF SDFormat file.
             bundle_sdf_sdf_output_dir = os.path.join(
@@ -456,11 +478,11 @@ def main(
                 output_path=bundle_sdf_sdf_output_dir,
                 visual_mesh_path=bundle_sdf_mesh_path,
                 collision_mesh_path=bundle_sdf_mesh_path,
-                mass=inertia_params["mass"],
-                center_of_mass=np.array(inertia_params["center_of_mass"]),
-                moment_of_inertia=np.array(inertia_params["inertia_matrix"]),
+                mass=bundle_sdf_inertia_params["mass"],
+                center_of_mass=np.array(bundle_sdf_inertia_params["center_of_mass"]),
+                moment_of_inertia=np.array(bundle_sdf_inertia_params["inertia_matrix"]),
                 use_hydroelastic=False,  # Enable for more accurate but Drake-specific SDFormat
-                use_coacd=False,
+                use_coacd=True,
             )
 
             # Nerfacto reconstruction + SDFormat output.
@@ -493,6 +515,19 @@ def main(
             )
             logging.info(f"Canonicalized Neuralangelo mesh: {neuralangelo_mesh_path}")
 
+            # Physical property estimation in the Neuralangelo frame.
+            neuralangelo_inertia_params_path = os.path.join(
+                object_dir, "neuralangelo_inertial_params.json"
+            )
+            identify_grasped_object_payload(
+                robot_joint_data_path=robot_id_dir,
+                object_joint_data_path=os.path.join(object_dir, "system_id_data"),
+                object_mesh_path=neuralangelo_mesh_path,
+                json_output_path=neuralangelo_inertia_params_path,
+            )
+            with open(neuralangelo_inertia_params_path, "r") as f:
+                neuralangelo_inertia_params = json.load(f)
+
             # Output the Neuralangelo SDFormat file.
             neuralangelo_sdf_output_dir = os.path.join(
                 object_output_dir, f"{object_name}_neuralangelo.sdf"
@@ -503,9 +538,11 @@ def main(
                 output_path=neuralangelo_sdf_output_dir,
                 visual_mesh_path=neuralangelo_mesh_path,
                 collision_mesh_path=neuralangelo_mesh_path,
-                mass=inertia_params["mass"],
-                center_of_mass=np.array(inertia_params["center_of_mass"]),
-                moment_of_inertia=np.array(inertia_params["inertia_matrix"]),
+                mass=neuralangelo_inertia_params["mass"],
+                center_of_mass=np.array(neuralangelo_inertia_params["center_of_mass"]),
+                moment_of_inertia=np.array(
+                    neuralangelo_inertia_params["inertia_matrix"]
+                ),
                 use_hydroelastic=False,  # Enable for more accurate but Drake-specific SDFormat
                 use_coacd=True,
             )

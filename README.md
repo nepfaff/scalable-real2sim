@@ -161,7 +161,7 @@ for more details and recommended script parameters.
 ### 2. Run data collection
 
 The initial robot data can be collected with **Script TBC**. This
-needs to be done once per environment.
+needs to be done once per environment. Note that this requires a MOSEK license.
 
 The object data collection can be run with `scalable_real2sim/run_data_collection.py`.
 
@@ -169,7 +169,8 @@ The object data collection can be run with `scalable_real2sim/run_data_collectio
 
 The robot identification can be run with
 `scalable_real2sim/robot_payload_id/scripts/identify_robot_at_multiple_gripper_oppenings.py`.
-
+The only required argument is `--joint_data_path` which points to the robot data
+collected in step 2.
 Note that this needs to be done once per environment for the robot data from step 2.
 
 ### 4. Run asset generation
