@@ -1,5 +1,4 @@
 FROM robotlocomotion/drake:1.35.0
-LABEL Aditya Kamireddypalli "kamireddypalliaditya@gmail.com"
 
 ENV WORKSPACE /root/workspace
 
