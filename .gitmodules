@@ -1,16 +1,16 @@
 [submodule "scalable_real2sim/robot_payload_id"]
 	path = scalable_real2sim/robot_payload_id
-	url = git@github.com:nepfaff/robot_payload_id.git
+	url = https://github.com/nepfaff/robot_payload_id.git
 [submodule "scalable_real2sim/neuralangelo"]
 	path = scalable_real2sim/neuralangelo
-	url = git@github.com:evelyn-fu/neuralangelo.git
+	url = https://github.com/evelyn-fu/neuralangelo.git
 	branch = object_masking
 [submodule "scalable_real2sim/Frosting"]
 	path = scalable_real2sim/Frosting
-	url = git@github.com:nepfaff/Frosting.git
+	url = https://github.com/nepfaff/Frosting.git
 [submodule "scalable_real2sim/BundleSDF"]
 	path = scalable_real2sim/BundleSDF
-	url = git@github.com:nepfaff/BundleSDF.git
+	url = https://github.com/nepfaff/BundleSDF.git
 [submodule "scalable_real2sim/pickplace_data_collection"]
 	path = scalable_real2sim/pickplace_data_collection
-	url = git@github.com:evelyn-fu/pickplace_data_collection.git
+	url = https://github.com/evelyn-fu/pickplace_data_collection.git
