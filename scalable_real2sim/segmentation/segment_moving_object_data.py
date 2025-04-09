@@ -14,9 +14,11 @@ import cv2
 import numpy as np
 import torch
 
+from mmdet.apis import inference_detector, init_detector
 from PIL import Image
 from sam2.build_sam import build_sam2, build_sam2_video_predictor
 from sam2.sam2_image_predictor import SAM2ImagePredictor
+from torch.cuda.amp import autocast
 from tqdm import tqdm
 from transformers import AutoModelForZeroShotObjectDetection, AutoProcessor
 
@@ -112,7 +114,12 @@ def segment_moving_obj_data(
                 "Text prompt must be provided if GUI frames are not specified."
             )
 
-    sam2_checkpoint = "./checkpoints/sam2_hiera_large.pt"
+    if txt_prompt == "gripper":
+        sam2_checkpoint = (
+            "./checkpoints/checkpoint_gripper_finetune_sam2_200epoch_4_1.pt"
+        )
+    else:
+        sam2_checkpoint = "./checkpoints/sam2_hiera_large.pt"
     model_cfg = "sam2_hiera_l.yaml"
 
     # Download checkpoint if not exist.
@@ -142,12 +149,19 @@ def segment_moving_obj_data(
 
     # Build Grounding DINO from Hugging Face (used only if not using GUI)
     if gui_frames is None:
-        model_id = "IDEA-Research/grounding-dino-tiny"
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        processor = AutoProcessor.from_pretrained(model_id)
-        grounding_model = AutoModelForZeroShotObjectDetection.from_pretrained(
-            model_id
-        ).to(device)
+        if txt_prompt == "gripper":
+            config_file = "./configs/grounding_dino_swin-t_finetune_gripper.py"
+            checkpoint_file = "./checkpoints/best_coco_bbox_mAP_epoch_8.pth"
+            device = "cuda:0" if torch.cuda.is_available() else "cpu"
+            model = init_detector(config_file, checkpoint_file, device=device)
+        else:
+            model_id = "IDEA-Research/grounding-dino-tiny"
+            model_id = "./checkpoints/best_coco_bbox_mAP_epoch_8.pth"
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            processor = AutoProcessor.from_pretrained(model_id)
+            grounding_model = AutoModelForZeroShotObjectDetection.from_pretrained(
+                model_id
+            ).to(device)
 
     # Convert PNG to JPG as required for video predictor.
     jpg_dir = os.path.join(rgb_dir, "jpg")
@@ -425,23 +439,34 @@ def segment_moving_obj_data(
         # Function to get DINO boxes
         def get_dino_boxes(text, frame_idx):
             img_path = os.path.join(jpg_dir, frame_names[frame_idx])
-            image = Image.open(img_path)
+            if txt_prompt == "gripper":
+                # Use mmdetection api for gripper
+                with autocast(enabled=False):
+                    results = inference_detector(model, img_path, text_prompt=text)
 
-            inputs = processor(images=image, text=text, return_tensors="pt").to(device)
-            with torch.no_grad():
-                outputs = grounding_model(**inputs)
+                input_boxes = results.pred_instances[0].bboxes.cpu().numpy()
+                confidences = results.pred_instances[0].scores.cpu().numpy().tolist()
+                class_names = results.pred_instances[0].label_names
+            else:
+                image = Image.open(img_path)
 
-            results = processor.post_process_grounded_object_detection(
-                outputs,
-                inputs.input_ids,
-                box_threshold=0.4,
-                text_threshold=0.3,
-                target_sizes=[image.size[::-1]],
-            )
+                inputs = processor(images=image, text=text, return_tensors="pt").to(
+                    device
+                )
+                with torch.no_grad():
+                    outputs = grounding_model(**inputs)
 
-            input_boxes = results[0]["boxes"].cpu().numpy()
-            confidences = results[0]["scores"].cpu().numpy().tolist()
-            class_names = results[0]["labels"]
+                results = processor.post_process_grounded_object_detection(
+                    outputs,
+                    inputs.input_ids,
+                    box_threshold=0.4,
+                    text_threshold=0.3,
+                    target_sizes=[image.size[::-1]],
+                )
+                input_boxes = results[0]["boxes"].cpu().numpy()
+                confidences = results[0]["scores"].cpu().numpy().tolist()
+                class_names = results[0]["labels"]
+
             return input_boxes, confidences, class_names
 
         input_boxes, confidences, class_names = get_dino_boxes(
