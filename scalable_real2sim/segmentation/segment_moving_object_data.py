@@ -28,6 +28,7 @@ Hyperparameters for Grounding and Tracking
 PROMPT_TYPE_FOR_VIDEO = "point"  # Choose from ["point", "box", "mask"]
 OFFLOAD_VIDEO_TO_CPU = True  # Prevents OOM for large videos but is slower.
 OFFLOAD_STATE_TO_CPU = True
+DINO_CONFIDENCE_THRESHOLD = 0.6
 
 
 def convert_png_to_jpg(input_folder, output_folder):
@@ -469,9 +470,14 @@ def segment_moving_obj_data(
 
             return input_boxes, confidences, class_names
 
-        input_boxes, confidences, class_names = get_dino_boxes(
-            txt_prompt, txt_prompt_index
-        )
+        while True:
+            input_boxes, confidences, class_names = get_dino_boxes(
+                txt_prompt, txt_prompt_index
+            )
+            if confidences[0] > DINO_CONFIDENCE_THRESHOLD:
+                break
+            else:
+                txt_prompt_index += 1
 
         assert (
             len(input_boxes) > 0
@@ -677,6 +683,16 @@ def segment_moving_obj_data(
                     os.remove(f)
                 except Exception as e:
                     logging.error(f"Error deleting {f}: {e}")
+
+    # save black masks for gripper not found frames
+    for frame_idx in range(txt_prompt_index):
+        image_name = frame_names[frame_idx]
+        img_path = os.path.join(jpg_dir, image_name)
+        image = cv2.imread(img_path)
+        mask = np.zeros_like(image).astype(np.uint8)
+
+        mask_name = os.path.splitext(image_name)[0] + ".png"
+        cv2.imwrite(os.path.join(output_dir, mask_name), mask)
 
     for frame_idx, segments in video_segments.items():
         if gui_frames is None and neg_txt_prompt is not None:
