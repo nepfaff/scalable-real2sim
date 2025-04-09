@@ -108,6 +108,24 @@ automatic annotations using DINO work well in many cases but can struggle with t
 gripper masks. All downstream object tracking and reconstruction results are sensitive
 to the segmentation quality and thus spending a bit of effort here might be worthwhile.
 
+##### Gripper masking with fine tuned models
+We provide fine tuned networks for SAM2 and GroundingDINO for the segmentation and annotation
+of the gripper used in our provided dataset which can be downloaded from [insert link here].
+
+Please put the checkpoint files in `./checkpoints` and the `config` folder in the root directory.
+We used mmdetection's implementation to fine tune Grounding DINO. Please see the 
+[mmdetection Official Github](https://github.com/open-mmlab/mmdetection/tree/main)
+for installation instructions. 
+
+When `txt_prompt` is set to `gripper`, the segmentation script will use the gripper fine tuned
+models for annotation and segmentation.
+
+To fine tune your own object detection model for your gripper, see the instructions
+from the [mmdetection Grounding DINO README](https://github.com/open-mmlab/mmdetection/blob/main/configs/grounding_dino/README.md).
+
+To fine tune your own segmentation model for your gripper, see the instructions from the
+[SAM2 Training README](https://github.com/facebookresearch/sam2/blob/main/training/README.md)
+
 ### Submodules
 
 #### robot_payload_id
