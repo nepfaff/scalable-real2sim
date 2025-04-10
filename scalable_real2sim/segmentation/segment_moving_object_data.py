@@ -151,7 +151,7 @@ def segment_moving_obj_data(
     # Build Grounding DINO from Hugging Face (used only if not using GUI)
     if gui_frames is None:
         if txt_prompt == "gripper":
-            config_file = "./configs/grounding_dino_swin-t_finetune_gripper.py"
+            config_file = "./configs/grounding_dino_swin-t_finetune_16xb2_1x_coco.py"
             checkpoint_file = "./checkpoints/best_coco_bbox_mAP_epoch_8.pth"
             device = "cuda:0" if torch.cuda.is_available() else "cpu"
             model = init_detector(config_file, checkpoint_file, device=device)
