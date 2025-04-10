@@ -112,12 +112,12 @@ to the segmentation quality and thus spending a bit of effort here might be wort
 We provide fine tuned networks for SAM2 and GroundingDINO for the segmentation and annotation
 of the gripper used in our provided dataset which can be downloaded from [insert link here].
 
-Please put the checkpoint files in `./checkpoints` and the `config` folder in the root directory.
+Please put the downloaded checkpoint files in the `./checkpoints` directory.
 We used mmdetection's implementation to fine tune Grounding DINO. Please see the 
 [mmdetection Official Github](https://github.com/open-mmlab/mmdetection/tree/main)
 for installation instructions. 
 
-When `txt_prompt` is set to `gripper`, the segmentation script will use the gripper fine tuned
+When `--txt_prompt` is set to `gripper`, the segmentation script will use the gripper fine tuned
 models for annotation and segmentation.
 
 To fine tune your own object detection model for your gripper, see the instructions
