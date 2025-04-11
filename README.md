@@ -110,7 +110,7 @@ to the segmentation quality and thus spending a bit of effort here might be wort
 
 ##### Gripper masking with fine tuned models
 We provide fine tuned networks for SAM2 and GroundingDINO for the segmentation and annotation
-of the gripper used in our provided dataset which can be downloaded from [insert link here].
+of the gripper used in our provided dataset which can be downloaded from [here](https://mitprod-my.sharepoint.com/personal/nepfaff_mit_edu/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fnepfaff%5Fmit%5Fedu%2FDocuments%2Fscalable%5Freal2sim%5Fmodel%5Fweights&ga=1).
 
 Please put the downloaded checkpoint files in the `./checkpoints` directory.
 We used mmdetection's implementation to fine tune Grounding DINO. Please see the 
@@ -120,11 +120,11 @@ for installation instructions.
 When `--txt_prompt` is set to `gripper`, the segmentation script will use the gripper fine tuned
 models for annotation and segmentation.
 
-To fine tune your own object detection model for your gripper, see the instructions
-from the [mmdetection Grounding DINO README](https://github.com/open-mmlab/mmdetection/blob/main/configs/grounding_dino/README.md).
+To fine tune your own object detection model for your gripper, see [these instructions](https://github.com/open-mmlab/mmdetection/blob/main/configs/grounding_dino/README.md)
+from the mmdetection Official Github.
 
-To fine tune your own segmentation model for your gripper, see the instructions from the
-[SAM2 Training README](https://github.com/facebookresearch/sam2/blob/main/training/README.md)
+To fine tune your own segmentation model for your gripper, see [these instructions](https://github.com/facebookresearch/sam2/blob/main/training/README.md) for training from the
+SAM2 Official Github.
 
 ### Submodules
 
