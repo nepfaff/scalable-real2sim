@@ -126,6 +126,12 @@ from the mmdetection Official Github.
 To fine tune your own segmentation model for your gripper, see [these instructions](https://github.com/facebookresearch/sam2/blob/main/training/README.md) for training from the
 SAM2 Official Github.
 
+An example of segmentation failure on the gripper with default models:
+![gripper segment default](assets/mask_sam2_default.png)
+
+Gripper segmentation on the same image with custom models:
+![gripper segment custom](assets/mask_sam2_custom.png)
+
 ### Submodules
 
 #### robot_payload_id
