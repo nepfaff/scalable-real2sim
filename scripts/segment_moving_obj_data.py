@@ -96,6 +96,18 @@ if __name__ == "__main__":
         help="Number of images to subsample to.",
         default=None,
     )
+    parser.add_argument(
+        "--gripper_sam2_path",
+        type=str,
+        help="Path to custom SAM2 model for gripper segmentation.",
+        default=None,
+    )
+    parser.add_argument(
+        "--gripper_grounding_dino_path",
+        type=str,
+        help="Path to custom GroundingDINO model for gripper object detection.",
+        default=None,
+    )
     args = parser.parse_args()
     rgb_dir = args.rgb_dir
     output_dir = args.output_dir
@@ -106,6 +118,8 @@ if __name__ == "__main__":
     debug_dir = args.debug_dir
     gui_frames = args.gui_frames
     num_images = args.num_images
+    gripper_sam2_path = args.gripper_sam2_path
+    gripper_grounding_dino_path = args.gripper_grounding_dino_path
 
     if num_images is not None:
         downsample_images(rgb_dir, num_images)
@@ -119,4 +133,6 @@ if __name__ == "__main__":
         num_neg_frames=num_neg_frames,
         debug_dir=debug_dir,
         gui_frames=gui_frames,
+        gripper_sam2_path=gripper_sam2_path,
+        gripper_grounding_dino_path=gripper_grounding_dino_path,
     )

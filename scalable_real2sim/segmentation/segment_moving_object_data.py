@@ -104,6 +104,8 @@ def segment_moving_obj_data(
     num_neg_frames: int = 10,
     debug_dir: str | None = None,
     gui_frames: list[str] | None = None,
+    gripper_sam2_path: str | None = None,
+    gripper_grounding_dino_path: str | None = None,
 ):
     # Ensure mutual exclusivity between GUI and text prompts
     if gui_frames is not None:
@@ -116,9 +118,19 @@ def segment_moving_obj_data(
             )
 
     if txt_prompt == "gripper":
-        sam2_checkpoint = (
+        default_gripper_sam2_path = (
             "./checkpoints/checkpoint_gripper_finetune_sam2_200epoch_4_1.pt"
         )
+        if gripper_sam2_path is None:
+            sam2_checkpoint = default_gripper_sam2_path
+        else:
+            sam2_checkpoint = gripper_sam2_path
+
+        if not os.path.exists(sam2_checkpoint):
+            logging.info(
+                "Custom gripper segmentation model not found, using default SAM2 model."
+            )
+            sam2_checkpoint = "./checkpoints/sam2_hiera_large.pt"
     else:
         sam2_checkpoint = "./checkpoints/sam2_hiera_large.pt"
     model_cfg = "sam2_hiera_l.yaml"
@@ -149,15 +161,31 @@ def segment_moving_obj_data(
     image_predictor = SAM2ImagePredictor(sam2_image_model)
 
     # Build Grounding DINO from Hugging Face (used only if not using GUI)
+    use_mmdetection = False
     if gui_frames is None:
         if txt_prompt == "gripper":
-            config_file = "./configs/grounding_dino_swin-t_finetune_16xb2_1x_coco.py"
-            checkpoint_file = "./checkpoints/best_coco_bbox_mAP_epoch_8.pth"
-            device = "cuda:0" if torch.cuda.is_available() else "cpu"
-            model = init_detector(config_file, checkpoint_file, device=device)
-        else:
+            default_gripper_grounding_dino_path = (
+                "./checkpoints/best_coco_bbox_mAP_epoch_8.pth"
+            )
+            if gripper_grounding_dino_path is None:
+                checkpoint_file = default_gripper_grounding_dino_path
+            else:
+                checkpoint_file = gripper_grounding_dino_path
+
+            if os.path.exists(checkpoint_file):
+                use_mmdetection = True
+                config_file = (
+                    "./configs/grounding_dino_swin-t_finetune_16xb2_1x_coco.py"
+                )
+                device = "cuda:0" if torch.cuda.is_available() else "cpu"
+                model = init_detector(config_file, checkpoint_file, device=device)
+            else:
+                logging.info(
+                    "Custom gripper grounding dino model not found, using default model."
+                )
+
+        if not use_mmdetection:
             model_id = "IDEA-Research/grounding-dino-tiny"
-            model_id = "./checkpoints/best_coco_bbox_mAP_epoch_8.pth"
             device = "cuda" if torch.cuda.is_available() else "cpu"
             processor = AutoProcessor.from_pretrained(model_id)
             grounding_model = AutoModelForZeroShotObjectDetection.from_pretrained(
