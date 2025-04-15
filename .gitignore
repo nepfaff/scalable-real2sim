@@ -1,7 +1,6 @@
 .venv
 .venv_nerfstudio
 data
-checkpoints
 __pycache__
 outputs
 .vscode
