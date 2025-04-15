@@ -14,7 +14,14 @@ import cv2
 import numpy as np
 import torch
 
-from mmdet.apis import inference_detector, init_detector
+try:
+    from mmdet.apis import inference_detector, init_detector
+
+    MMDET_AVAILABLE = True
+except ImportError:
+    logging.warning("... not installed. Finetuned segmentation model not available.")
+    MMDET_AVAILABLE = False
+
 from PIL import Image
 from sam2.build_sam import build_sam2, build_sam2_video_predictor
 from sam2.sam2_image_predictor import SAM2ImagePredictor
@@ -118,18 +125,18 @@ def segment_moving_obj_data(
             )
 
     if txt_prompt == "gripper":
-        default_gripper_sam2_path = (
-            "./checkpoints/checkpoint_gripper_finetune_sam2_200epoch_4_1.pt"
-        )
-        if gripper_sam2_path is None:
-            sam2_checkpoint = default_gripper_sam2_path
-        else:
-            sam2_checkpoint = gripper_sam2_path
-
-        if not os.path.exists(sam2_checkpoint):
-            logging.info(
-                "Custom gripper segmentation model not found, using default SAM2 model."
+        if MMDET_AVAILABLE:
+            default_gripper_sam2_path = (
+                "./checkpoints/checkpoint_gripper_finetune_sam2_200epoch_4_1.pt"
             )
+            if gripper_sam2_path is None:
+                sam2_checkpoint = default_gripper_sam2_path
+            else:
+                sam2_checkpoint = gripper_sam2_path
+
+            if not os.path.exists(sam2_checkpoint):
+                raise RuntimeError("Custom gripper segmentation model not found.")
+        else:
             sam2_checkpoint = "./checkpoints/sam2_hiera_large.pt"
     else:
         sam2_checkpoint = "./checkpoints/sam2_hiera_large.pt"
@@ -161,7 +168,6 @@ def segment_moving_obj_data(
     image_predictor = SAM2ImagePredictor(sam2_image_model)
 
     # Build Grounding DINO from Hugging Face (used only if not using GUI)
-    use_mmdetection = False
     if gui_frames is None:
         if txt_prompt == "gripper":
             default_gripper_grounding_dino_path = (
@@ -173,18 +179,12 @@ def segment_moving_obj_data(
                 checkpoint_file = gripper_grounding_dino_path
 
             if os.path.exists(checkpoint_file):
-                use_mmdetection = True
-                config_file = (
-                    "./configs/grounding_dino_swin-t_finetune_16xb2_1x_coco.py"
-                )
+                config_file = "./scalable_real2sim/segmentation/finetuned_grounding_dino_utils/grounding_dino_swin-t_finetune_16xb2_1x_coco.py"
                 device = "cuda:0" if torch.cuda.is_available() else "cpu"
                 model = init_detector(config_file, checkpoint_file, device=device)
             else:
-                logging.info(
-                    "Custom gripper grounding dino model not found, using default model."
-                )
-
-        if not use_mmdetection:
+                raise RuntimeError("Custom gripper grounding dino model not found")
+        else:
             model_id = "IDEA-Research/grounding-dino-tiny"
             device = "cuda" if torch.cuda.is_available() else "cpu"
             processor = AutoProcessor.from_pretrained(model_id)
@@ -470,7 +470,7 @@ def segment_moving_obj_data(
             img_path = os.path.join(jpg_dir, frame_names[frame_idx])
             if txt_prompt == "gripper":
                 # Use mmdetection api for gripper
-                with autocast(enabled=False):
+                with autocast(enabled=False):  # needed to avoid error
                     results = inference_detector(model, img_path, text_prompt=text)
 
                 input_boxes = results.pred_instances[0].bboxes.cpu().numpy()
@@ -498,17 +498,20 @@ def segment_moving_obj_data(
 
             return input_boxes, confidences, class_names
 
-        while True:
+        # Find the first frame in which the gripper appears with confidence > threshold
+        result_found = False
+        for txt_prompt_index in range(txt_prompt_index, frame_count):
             input_boxes, confidences, class_names = get_dino_boxes(
                 txt_prompt, txt_prompt_index
             )
+            if len(input_boxes) == 0:
+                continue
             if confidences[0] > DINO_CONFIDENCE_THRESHOLD:
+                result_found = True
                 break
-            else:
-                txt_prompt_index += 1
 
         assert (
-            len(input_boxes) > 0
+            result_found
         ), "No results found for the text prompt. Make sure that the prompt ends with a dot '.'!"
 
         # Prompt SAM image predictor to get the mask for the object
@@ -712,7 +715,7 @@ def segment_moving_obj_data(
                 except Exception as e:
                     logging.error(f"Error deleting {f}: {e}")
 
-    # save black masks for gripper not found frames
+    # Writing black masks until the gripper appears in a frame
     for frame_idx in range(txt_prompt_index):
         image_name = frame_names[frame_idx]
         img_path = os.path.join(jpg_dir, image_name)

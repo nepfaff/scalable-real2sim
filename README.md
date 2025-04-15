@@ -105,17 +105,24 @@ Our segmentation pipeline for obtaining object and gripper masks. You might want
 do human-in-the-loop segmentation by annotating specific frames with positive/ negative
 labels for more robust results. We provide a simple GUI for this purpose. The default
 automatic annotations using DINO work well in many cases but can struggle with the
-gripper masks. All downstream object tracking and reconstruction results are sensitive
-to the segmentation quality and thus spending a bit of effort here might be worthwhile.
+gripper masks. This is possibly because our particular gripper seems to be out of 
+distribution for SAM2, and thus it looses track of it for long videos. This can be 
+solved with re-prompting it after failure. All downstream object tracking and 
+reconstruction results are sensitive to the segmentation quality and thus spending a bit
+of effort here might be worthwhile.
 
 ##### Gripper masking with fine tuned models
+Using fine tuned SAM2 and GroundingDINO networks for a gripper that is out of distribution
+can help to remove the extra step of reprompting after failure.
+
 We provide fine tuned networks for SAM2 and GroundingDINO for the segmentation and annotation
 of the gripper used in our provided dataset which can be downloaded from [here](https://mitprod-my.sharepoint.com/personal/nepfaff_mit_edu/_layouts/15/onedrive.aspx?id=%2Fpersonal%2Fnepfaff%5Fmit%5Fedu%2FDocuments%2Fscalable%5Freal2sim%5Fmodel%5Fweights&ga=1).
 
 Please put the downloaded checkpoint files in the `./checkpoints` directory.
 We used mmdetection's implementation to fine tune Grounding DINO. Please see the 
 [mmdetection Official Github](https://github.com/open-mmlab/mmdetection/tree/main)
-for installation instructions. 
+for installation instructions. Make sure to be in the virtual environment set up with poetry, 
+not the Nerfstudio virtual environment.
 
 When `--txt_prompt` is set to `gripper`, the segmentation script will use the gripper fine tuned
 models for annotation and segmentation.
@@ -127,7 +134,7 @@ To fine tune your own segmentation model for your gripper, see [these instructio
 SAM2 Official Github.
 
 An example of segmentation failure on the gripper with default models: \
-<img src="assets/mask_sam2_default.png" width="200"> 
+<img src="assets/mask_sam2_failure.png" width="200"> 
 
 Gripper segmentation on the same image with custom models: \
 <img src="assets/mask_sam2_custom.png" width="200"> 
@@ -201,7 +208,9 @@ Note that this needs to be done once per environment for the robot data from ste
 
 ### 4. Run asset generation
 
-The asset generation can be run with `scalable_real2sim/run_asset_generation.py`.
+The asset generation can be run with `scalable_real2sim/run_asset_generation.py`. The `--use-finetuned-gripper-segmentation` flag can be specified to use fine tuned SAM2 and GroundingDINO
+models for gripper segmentation. See the section on `segment_moving_obj_data.py` for installation
+instructions.
 
 ## Figures
 

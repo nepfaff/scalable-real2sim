@@ -73,7 +73,9 @@ def downsample_images(data_dir: str, num_images: int) -> None:
     )
 
 
-def run_segmentation(data_dir: str, output_dir: str) -> None:
+def run_segmentation(
+    data_dir: str, output_dir: str, use_finetuned_gripper_networks: bool = False
+) -> None:
     start = time.perf_counter()
 
     # Detect the object of interest. Need to add a dot for the DINO model.
@@ -89,8 +91,12 @@ def run_segmentation(data_dir: str, output_dir: str) -> None:
     logging.info(f"Detected object of interest: {object_of_interest}")
 
     gripper_txt = (
-        "Blue plastic robotic gripper with two symmetrical, curved arms "
-        "attached to the end of a metallic robotic arm."
+        ("gripper")
+        if use_finetuned_gripper_networks
+        else (
+            "Blue plastic robotic gripper with two symmetrical, curved arms "
+            "attached to the end of a metallic robotic arm."
+        )
     )
 
     # Generate the object masks.
@@ -383,6 +389,7 @@ def main(
     skip_segmentation: bool = False,
     bundle_sdf_interpolate_missing_vertices: bool = False,
     use_depth: bool = False,
+    use_finetuned_gripper_segmentation: bool = False,
 ):
     logging.info("Starting asset generation...")
 
@@ -422,7 +429,11 @@ def main(
             # Generate object and gripper masks.
             if not skip_segmentation:
                 logging.info("Running segmentation...")
-                run_segmentation(data_dir=object_dir, output_dir=object_dir)
+                run_segmentation(
+                    data_dir=object_dir,
+                    output_dir=object_dir,
+                    use_finetuned_gripper_networks=use_finetuned_gripper_segmentation,
+                )
             else:
                 logging.info("Skipping segmentation...")
                 if not os.path.exists(os.path.join(object_dir, "masks")):
@@ -607,6 +618,12 @@ if __name__ == "__main__":
         help="If specified, use depth images for geometric reconstruction when "
         "supported by the reconstruction method.",
     )
+    parser.add_argument(
+        "--use-finetuned-gripper-segmentation",
+        action="store_true",
+        help="If specified, use fine tuned SAM2 and GroundingDINO models for gripper"
+        "segmentation.",
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.data_dir):
@@ -622,4 +639,5 @@ if __name__ == "__main__":
         skip_segmentation=args.skip_segmentation,
         bundle_sdf_interpolate_missing_vertices=args.bundle_sdf_interpolate_missing_vertices,
         use_depth=args.use_depth,
+        use_finetuned_gripper_segmentation=args.use_finetuned_gripper_segmentation,
     )
