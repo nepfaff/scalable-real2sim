@@ -165,7 +165,7 @@ needs to be done once per environment. Note that this requires a MOSEK license.
 
 The object data collection can be run with `scalable_real2sim/run_data_collection.py`.
 
-Note that this code is written for a particular robot setup, and small adjustments will likely need to be made to work for a different setup.
+Note that this code is written for a particular robot setup, and small adjustments will likely need to be made to work for a different setup. Also note that you may encounter a segfault in one of the dependencies if your numpy version is >= 2.0.0.
 
 ### 3. Run robot identification
 

@@ -44,15 +44,15 @@ from pydrake.math import (
     RollPitchYaw,
 )
 from pathlib import Path
-from scalable_real2sim.pickplace_data_collection.planning.two_grasp_display_planner import PlannerState, PickState
+from planning.two_grasp_display_planner import PlannerState, PickState
 from pydrake.solvers import MosekSolver, GurobiSolver
 from pydrake.all import LeafSystem, Value, Context, InputPort
-from scalable_real2sim.pickplace_data_collection.planning.two_grasp_display_planner import TwoGraspPlanner
-from scalable_real2sim.pickplace_data_collection.planning.turntable_planner import TurntablePlanner
-from scalable_real2sim.pickplace_data_collection.perception.image_saver import ImageSaver
-from scalable_real2sim.pickplace_data_collection.perception.camera_in_world import CameraPoseInWorldSource
-from scalable_real2sim.pickplace_data_collection.planning.trajectory_sources import TrajectoryWithTimingInformationSource
-from scalable_real2sim.pickplace_data_collection.planning.diffik import AddIiwaDifferentialIK
+from planning.two_grasp_display_planner import TwoGraspPlanner
+from planning.turntable_planner import TurntablePlanner
+from perception.image_saver import ImageSaver
+from perception.camera_in_world import CameraPoseInWorldSource
+from planning.trajectory_sources import TrajectoryWithTimingInformationSource, DummyTrajSource
+from planning.diffik import AddIiwaDifferentialIK
 # from iiwa import IiwaHardwareStationDiagram
 
 def get_regions_static(scenario_path, dirstr):
@@ -202,8 +202,8 @@ def start_scenario(
 
     builder = DiagramBuilder()
 
-    dir_path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-    filename = os.path.join(dir_path, os.path.join("scenario_datas", scenario_path))
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    filename = os.path.join(dir_path, "scalable_real2sim", "pickplace_data_collection", "scenario_datas", scenario_path)
     scenario = LoadScenario(filename=filename)
     # station: IiwaHardwareStationDiagram = builder.AddNamedSystem(
     #     "station",
@@ -211,10 +211,11 @@ def start_scenario(
     #         scenario=scenario, has_wsg=True, use_hardware=use_hardware
     #     ),
     # )
-    station = builder.AddSystem(MakeHardwareStation(scenario, meshcat, hardware=False))
+    models_package = os.path.abspath(os.path.join(dir_path, "scalable_real2sim", "pickplace_data_collection", "models", "package.xml"))
+    station = builder.AddSystem(MakeHardwareStation(scenario, meshcat, hardware=False, package_xmls=[models_package]))
     if use_hardware:
         scenario.plant_config.time_step = 5e-3 # Controller frequency
-        external_station = builder.AddSystem(MakeHardwareStation(scenario, meshcat, hardware=True))
+        external_station = builder.AddSystem(MakeHardwareStation(scenario, meshcat, hardware=True, package_xmls=[models_package]))
     plant = station.GetSubsystemByName("plant")
     # plant = station.get_plant()
 
@@ -331,16 +332,28 @@ def start_scenario(
         x_bin_camera = x_bin_rgb @ x_depth_rgb_bin
     else:
         # Front camera
-        x_front_camera = RigidTransform(np.loadtxt("/home/real2sim/calibrations/2_10_calibrations_aligned/front.txt"))
+        x_front_camera = RigidTransform(
+            RotationMatrix(RollPitchYaw(-150.29508676 / 180. * np.pi, -0.49652966 / 180. * np.pi, 87.69325379 / 180. * np.pi)),
+            [1.00847, -0.0314675, 1.12864]
+        )
 
         # Back Right camera
-        x_back_right_camera = RigidTransform(np.loadtxt("/home/real2sim/calibrations/2_10_calibrations_aligned/back_right.txt"))
+        x_back_right_camera = RigidTransform(
+            RotationMatrix(RollPitchYaw(-105.81290946 / 180. * np.pi, 2.14985993, -43.7254432 / 180. * np.pi)),
+            [-0.110748, -0.931772,  0.388191]
+        )
 
         # Back Left camera
-        x_back_left_camera = RigidTransform(np.loadtxt("/home/real2sim/calibrations/2_10_calibrations_aligned/back_left.txt"))
+        x_back_left_camera = RigidTransform(
+            RotationMatrix(RollPitchYaw(-102.739428 / 180. * np.pi, -3.69469624 / 180. * np.pi, -149.1420755 / 180. * np.pi)),
+            [-0.0533544,  1.00955,  0.449207]
+        )
 
         # Bin camera
-        x_bin_camera = RigidTransform(np.loadtxt("/home/real2sim/calibrations/bin_calibration_2_7_daniilidis.txt"))
+        x_bin_camera = RigidTransform(
+            RotationMatrix(RollPitchYaw(-164.69831287 / 180. * np.pi, -35.83297034 / 180. * np.pi, -99.44115857 / 180. * np.pi)),
+            [-0.0574518,  0.874365 ,  0.332985]
+        )
 
     # connect stationary camera pcd source
     camera0_pose_source = builder.AddSystem(CameraPoseInWorldSource(x_front_camera, handeye=False))
@@ -383,7 +396,7 @@ def start_scenario(
                 X_WC_bin=x_bin_camera,
                 meshcat=meshcat,
                 dirstr=dirstr,
-                models_path=os.path.join(dir_path, os.path.join("scenario_datas", models_path)),
+                models_path=os.path.join(dir_path, "scalable_real2sim", "pickplace_data_collection", "scenario_datas", models_path),
                 gripper_model_path=gripper_model_path))
     else:
         planner = builder.AddSystem(
@@ -397,7 +410,7 @@ def start_scenario(
                 meshcat=meshcat,
                 dirstr=dirstr,
                 time_horizon=time_horizon,
-                models_path=os.path.join(dir_path, os.path.join("scenario_datas", models_path)),
+                models_path=os.path.join(dir_path, "scalable_real2sim", "pickplace_data_collection", "scenario_datas", models_path),
                 gripper_model_path=gripper_model_path,
                 num_objs=num_objects
             )
@@ -440,14 +453,25 @@ def start_scenario(
     # Connect system ID data saver ports.
     builder.Connect(planner.GetOutputPort("planner_state"), sys_id_saver.GetInputPort("planner_state"))
     builder.Connect(planner.GetOutputPort("pick_state"), sys_id_saver.GetInputPort("pick_state"))
-    builder.Connect(
-        external_station.GetOutputPort("iiwa.position_measured"),
-        sys_id_saver.GetInputPort("iiwa.position_measured"),
-    )
-    builder.Connect(
-        external_station.GetOutputPort("iiwa.torque_measured"),
-        sys_id_saver.GetInputPort("iiwa.torque_measured"),
-    )
+    if not use_hardware:
+        builder.Connect(
+            station.GetOutputPort("iiwa.position_measured"),
+            sys_id_saver.GetInputPort("iiwa.position_measured"),
+        )
+        builder.Connect(
+            station.GetOutputPort("iiwa.torque_measured"),
+            sys_id_saver.GetInputPort("iiwa.torque_measured"),
+        )
+    else:
+        builder.Connect(
+            external_station.GetOutputPort("iiwa.position_measured"),
+            sys_id_saver.GetInputPort("iiwa.position_measured"),
+        )
+        builder.Connect(
+            external_station.GetOutputPort("iiwa.torque_measured"),
+            sys_id_saver.GetInputPort("iiwa.torque_measured"),
+        )
+
     builder.Connect(
         wsg_state_demux.get_output_port(0),
         sys_id_saver.GetInputPort("wsg.position_measured"),
@@ -640,7 +664,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--models_path",
         default="scenario_data_grasping.dmd.yaml",
-        help="dmd.yaml file with scenario, used for generating iris regions",
+        help="dmd.yaml file with scenario, used for checking for collisions",
         nargs='?',
     )
     parser.add_argument(
@@ -666,6 +690,11 @@ if __name__ == "__main__":
         help="yaml file with scenario",
     )
     parser.add_argument(
+        "--use_custom_path_planner",
+        action="store_true",
+        help="Whether to use user implemented path planner.",
+    )
+    parser.add_argument(
         "--turntable",
         action="store_true",
         help="Whether to use turntable planner.",
@@ -679,15 +708,13 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    gripper_model_path = "file://./home/real2sim/src/Real2SimObjectManipulation/models/schunk_wsg_50_welded_fingers_w_buffer.sdf"
-    # gripper_model_path = "file://./home/evelyn/sources/Real2SimObjectManipulation/models/schunk_wsg_50_welded_fingers_w_buffer.sdf"
-    if args.use_hardware:
-        gripper_model_path = "file://./home/real2sim/src/Real2SimObjectManipulation/models/schunk_wsg_50_welded_fingers_w_buffer.sdf"
+    directory_path = os.path.dirname(os.path.abspath(__file__))
+    gripper_model_path = "package://pickplace_data_collection/schunk_wsg_50_large_grippers_w_buffer.sdf"
 
     # Start the visualizer.
     meshcat = StartMeshcat()
 
-    save_dir_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'tests', args.save_dir))
+    save_dir_path = os.path.abspath(os.path.join(os.path.dirname( __file__ ), 'tests', args.save_dir))
     start_scenario(
         save_dir_path, 
         scenario_path= args.scenario_path, 
