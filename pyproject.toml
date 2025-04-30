@@ -7,7 +7,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
-drake = { version = ">=0.0.20250118 <1.0", source = "drake-nightly" }
+drake = { version = ">=0.0.20250204 <1.0", source = "drake-nightly" }
 numpy = "^2.2.0"
 scipy = "^1.15.1"
 manipulation = "^2025.2.16"
