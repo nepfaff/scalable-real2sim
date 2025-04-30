@@ -1,3 +1,8 @@
+"""
+Script for collecting all the data needed for asset generation. Runs in a loop until
+the first bin is empty.
+"""
+
 import argparse
 import numpy as np
 import os
