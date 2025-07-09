@@ -36,8 +36,9 @@ Install BundleSDF (this may take a while & will create a .venv in the BundleSDF 
 cd scalable_real2sim/BundleSDF/ && bash setup.bash
 ```
 
-Download pretrained weights of LoFTR outdoor_ds.ckpt, and put it under
-`scalable_real2sim/BundleSDF/BundleTrack/LoFTR/weights/outdoor_ds.ckpt`.
+Download pretrained weights of
+[LoFTR outdoor_ds.ckpt](https://drive.google.com/drive/folders/1xu2Pq6mZT5hmFgiYMBT9Zt8h1yO-3SIp),
+and put it under `scalable_real2sim/BundleSDF/BundleTrack/LoFTR/weights/outdoor_ds.ckpt`.
 
 Install Colmap. See [here](https://colmap.github.io/install.html) for instructions.
 
@@ -160,12 +161,15 @@ for more details and recommended script parameters.
 
 ### 2. Run data collection
 
-The initial robot data can be collected with `scalable_real2sim/pickplace_data_collection/scripts/collect_robot_joint_data_at_multiple_gripper_oppenings.py`. This
-needs to be done once per environment. Note that this requires a MOSEK license.
+The initial robot data can be collected with
+`scalable_real2sim/pickplace_data_collection/scripts/collect_robot_joint_data_at_multiple_gripper_oppenings.py`.
+This needs to be done once per environment.
 
 The object data collection can be run with `scalable_real2sim/run_data_collection.py`.
 
-Note that this code is written for a particular robot setup, and small adjustments will likely need to be made to work for a different setup. Also note that you may encounter a segfault in one of the dependencies if your numpy version is >= 2.0.0.
+Note that this code is written for a particular robot setup, and small adjustments will
+likely need to be made to work for a different setup. Also note that you may encounter a
+segfault in one of the dependencies if your numpy version is >= 2.0.0.
 
 ### 3. Run robot identification
 
@@ -174,10 +178,29 @@ The robot identification can be run with
 The only required argument is `--joint_data_path` which points to the robot data
 collected in step 2.
 Note that this needs to be done once per environment for the robot data from step 2.
+Note that this requires a MOSEK license.
 
 ### 4. Run asset generation
 
 The asset generation can be run with `scalable_real2sim/run_asset_generation.py`.
+
+#### Test asset generation with benchmark dataset
+
+You can test this part of the pipeline directly using the data from our
+[benchmark dataset](https://mitprod-my.sharepoint.com/:f:/g/personal/nepfaff_mit_edu/EvUKgDux7xBGhkPXUREYDI4B6MMJ0MzyE4oTkDLyyx1tOw).
+
+First, delete `rgb` and rename `rgb_original` to `rgb` to also test data downsampling.
+Then delete `obj_in_cam` so that object tracking can be run again. Then delete the
+existing reconstruction results `bundle_sdf_mesh`, `frosting_mesh`, `neuralangelo_mesh`.
+
+For the inflator only dataset, you could run the following command:
+```sh
+python run_asset_generation.py \
+ --data-dir scalable_real2sim_benchmark_dataset_inflator_only/object_data \
+ --robot-id-dir scalable_real2sim_benchmark_dataset_inflator_only/robot_system_id_data/ \
+ --output-dir inflator_out \
+ --skip-segmentation
+```
 
 ## Figures
 
