@@ -186,8 +186,26 @@ The asset generation can be run with `scalable_real2sim/run_asset_generation.py`
 
 #### Test asset generation with benchmark dataset
 
-You can test this part of the pipeline directly using the data from our
-[benchmark dataset](https://mitprod-my.sharepoint.com/:f:/g/personal/nepfaff_mit_edu/EvUKgDux7xBGhkPXUREYDI4B6MMJ0MzyE4oTkDLyyx1tOw).
+You can test this part of the pipeline directly using our
+[benchmark dataset and model weights](https://huggingface.co/datasets/nepfaff/scalable-real2sim).
+
+To download them from Hugging Face:
+```sh
+huggingface-cli download nepfaff/scalable-real2sim \
+  --repo-type dataset \
+  --local-dir .
+```
+
+The benchmark dataset stores each object directory under
+`scalable_real2sim_benchmark_dataset/object_data/` as a separate tar archive.
+Extract them in place before running asset generation:
+```sh
+cd scalable_real2sim_benchmark_dataset/object_data
+for archive in *.tar; do
+  tar -xf "$archive"
+done
+cd ../..
+```
 
 First, delete `rgb` and rename `rgb_original` to `rgb` to also test data downsampling.
 Then delete `obj_in_cam` so that object tracking can be run again. Then delete the
